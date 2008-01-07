@@ -3,7 +3,7 @@
 ;;; Fixed compiler errors and warnings --- Oliver Steele 2008-01-05
 
 ;; Utilities
-(eval-when (:compile-toplevel :load-toplevel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defmethod obj->string ((s string))
     s)
 
@@ -147,3 +147,5 @@
 (defmacro specify (name &body body)
   `(let ((*spec-specification* ,name))
      ,@body))
+
+(provide 'bdd)

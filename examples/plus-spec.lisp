@@ -15,4 +15,4 @@
    (=> (+ 10 0) should = 10))
   ("should have inverses"
    (=> (+ 1 -1) should be zero)
-   (=> (+ 10 -10) should be zero))))
+   (=> (+ 10 -10) should be zero)))

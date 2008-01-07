@@ -1,8 +1,40 @@
-(define-class specification name setup examples)
+;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
+
+(require 'dictionary)
+(require 'bdd)
+
+(defvar *collect-specifications* nil
+  "If true, DEFINE-SPECIFICATION collects specifications into
+*SPECIFICATIONS*.  (RUN-SPECIFICATION PATHNAME) binds this to true.")
+
+(defvar *run-specifications* t
+  "If true, DEFINE-SPECIFICATION runs each specification as it defines it.
+This makes it useful to evaluate a DEFINE-SPECIFICATION form interactively,
+as a quick check.  (RUN-SPECIFICATION PATHNAME) binds this to false,
+since it runs the specifications once it has collected them all.")
+
+(defvar *specifications* nil
+  "(RUN-SPECIFICATION PATHNAME) binds this to a list of specifications
+for DEFINE-SPECIFICATION to collect into.")
+
+;; this doesn't really test that every element has type TYPE, but
+;; I don't think there's a way to do that in CL
+(deftype list-type (&optional (type t))
+  `(and list (or null (cons ,type))))
+
+;; The SPECIFICATION class.
+(define-class specification name
+  (setup nil (or function null)) ; a function to run before each example
+  (examples nil (list-type (cons string function))))
 
 (define-print-method (specification name) "#<specification ~S>" name)
 
 (define-method (run-specification (self specification) &key onsuccess onerror)
+  "Test all the examples, and returns a list of dictionaries {:name, :success, :condition, :time}.
+
+Applies ONSUCCESS or ONERROR to each one, depending on whether it
+passes.  Callbacks are used so that the caller can show incremental
+progress during execution."
   (flet ((run-example (name fn)
            (if (specification-setup self)
                (funcall (specification-setup self)))
@@ -12,18 +44,17 @@
                                (funcall onsuccess name))
                            t)
              (expectation-not-met (condition)
-               ;(format t "~A while executing ~A" condition name)
                (if onerror
                    (funcall onerror name condition))
                nil))))
     (loop for (name . fn) in (specification-examples self)
        collect (cons name (run-example name fn)))))
 
-(defvar *collect-specifications* nil)
-(defvar *run-specifications* t)
-(defvar *specifications* nil)
-
 (defmacro define-specification (name values &body body)
+  "Define a SPECIFICATION, with a name, variables, and a list of examples.
+See the documentation for Ruby rspec or JavaScript jsspec for an
+overview on how this works; see the examples in the examples/
+subdirectory for examples in Lisp syntax."
   (let* ((before nil)
          (specs
           (loop for item in body
@@ -47,6 +78,8 @@
              spec)))))
 
 (define-method (run-specification (pathname pathname) &key onsuccess onerror)
+  "Load PATHNAME, collecting its specifications, and run them, reporting to
+standard output."
   (declare (ignore onsuccess onerror))
   (let ((*collect-specifications* t)
         (*run-specifications* nil)
@@ -56,15 +89,18 @@
         (failures nil)
         elapsed-time)
     (load pathname)
-    (for spec in *specifications*
-      do (incf example-count (length (specification-examples spec)))
-      do (run-specification spec
-                            :onsuccess #'(lambda (name)
-                                           (declare (ignore name))
-                                           (format t "."))
-                            :onerror #'(lambda (name condition)
-                                         (push `(,name . ,condition) failures)
-                                         (format t "F"))))
+    (flet ((write-progres-char (char)
+             (format t char)
+             (force-output)))
+      (for spec in *specifications*
+        do (incf example-count (length (specification-examples spec)))
+        do (run-specification spec
+                              :onsuccess #'(lambda (name)
+                                             (declare (ignore name))
+                                             (write-progress-char "."))
+                              :onerror #'(lambda (name condition)
+                                           (push `(,name . ,condition) failures)
+                                           (write-progress-char "F")))))
     (setf elapsed-time (- (get-internal-real-time) t0))
     (format t "~%~%")
     ;(print failures)
