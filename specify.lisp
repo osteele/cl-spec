@@ -77,37 +77,52 @@ subdirectory for examples in Lisp syntax."
              (run-specification spec)
              spec)))))
 
+(defmacro with-collecting-specifications (&body body)
+  `(let ((*collect-specifications* t)
+         (*run-specifications* nil)
+         (*specifications* nil))
+     ,@body
+     *specifications*))
+
+(defmacro with-elapsed-time (&body body)
+  (with-gensym t0
+    `(let ((,t0 (get-internal-real-time)))
+       ,@body
+       (/ (- (get-internal-real-time) ,t0) internal-time-units-per-second))))
+
 (define-method (run-specification (pathname pathname) &key onsuccess onerror)
-  "Load PATHNAME, collecting its specifications, and run them, reporting to
-standard output."
+  "Run the specifications in PATHNAME reporting results to standard output."
   (declare (ignore onsuccess onerror))
-  (let ((*collect-specifications* t)
-        (*run-specifications* nil)
-        (*specifications* nil)
-        (t0 (get-internal-real-time))
-        (example-count 0)
-        (failures nil)
-        elapsed-time)
-    (load pathname)
-    (flet ((write-progres-char (char)
-             (format t char)
-             (force-output)))
-      (for spec in *specifications*
-        do (incf example-count (length (specification-examples spec)))
-        do (run-specification spec
-                              :onsuccess #'(lambda (name)
-                                             (declare (ignore name))
-                                             (write-progress-char "."))
-                              :onerror #'(lambda (name condition)
-                                           (push `(,name . ,condition) failures)
-                                           (write-progress-char "F")))))
-    (setf elapsed-time (- (get-internal-real-time) t0))
-    (format t "~%~%")
-    ;(print failures)
-    (loop for (name . condition) in failures
-         for i upfrom 1
-         do (format t "~D)~%~A~%~A~%~%" i condition pathname))
-    (format t "Finished in ~F seconds~%~%"
-            (/ elapsed-time INTERNAL-TIME-UNITS-PER-SECOND))
-    (format t "~D example~:P, ~D failure~:P" example-count (length failures))
-    (values)))
+  (flet ((write-progress-char (char)
+           (format t char)
+           (force-output)))
+    (let* ((specifications
+            (with-collecting-specifications
+              (load pathname)))
+    (example-count 0)
+    (failures nil)
+    (elapsed-time
+     (with-elapsed-time
+       (for spec in specifications
+         do (incf example-count (length (specification-examples spec)))
+         do (run-specification spec
+                               :onsuccess #'(lambda (name)
+                                              (declare (ignore name))
+                                              (write-progress-char "."))
+                               :onerror #'(lambda (name condition)
+                                            (push `(,name . ,condition) failures)
+                                            (write-progress-char "F")))))))
+      (format t "~%~%")
+      (loop for (name . condition) in failures
+      for i upfrom 1
+      do (format t "~D)~%~A~%~A~%~%" i condition pathname))
+      (format t "Finished in ~F seconds~%~%" elapsed-time)
+      (format t "~D example~:P, ~D failure~:P" example-count (length failures))
+      nil)))
+
+(define-method (specification-runner (pathname pathname) &key &allow-other-keys)
+  "Run the specifications in PATHNAME reporting results to standard output."
+  (run-specification pathname))
+
+(define-method (specification-runner (string string) &key &allow-other-keys)
+  (run-specification (pathname string)))

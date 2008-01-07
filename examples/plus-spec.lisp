@@ -1,4 +1,4 @@
-(define-specification "plus" (stack)
+(define-specification "plus" ()
   ("should add two numbers"
    (=> (+ 1 2) should = 4))
   ("should add three numbers"
