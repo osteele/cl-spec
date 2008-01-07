@@ -1,9 +1,7 @@
 ;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
 
-(defpackage #:cl-spec-asd
-  (:use :cl :asdf))
-
-(in-package :cl-spec-asd)
+(defpackage #:cl-spec-asd (:use :cl :asdf))
+(in-package #:cl-spec-asd)
 
 (defsystem "cl-spec"
     :description "Behavioral Testing for Common Lisp."
@@ -12,5 +10,4 @@
     :licence "unknown"
     :components ((:file "cl-spec" :depends-on ("bdd"))
                  (:file "bdd")
-                 ))
-
+  :depends-on (:lexicons)))
