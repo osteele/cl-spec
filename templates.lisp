@@ -79,7 +79,9 @@
           (map-lines #'process-line s)))
       (nreverse chunks)))
 
-(defun apply-template (template dictionary output-stream)
+(defun apply-template (template &optional (dictionary {}) (output-stream t))
+  (if (stringp template)
+      (setf template (read-template template)))
   (dolist (chunk template)
     (typecase chunk
       (string
@@ -89,10 +91,11 @@
       (t
        (case (ref1 chunk :type)
          (:format
-          (let ((args
+          (let ((format-string (ref1 chunk :format-string))
+                (format-args
                  (loop for arg in (ref1 chunk :format-args)
-                    collect (ref1 arg dictionary))))
-            (format output-stream (ref1 chunk :format-string))))
+                    collect (ref1 dictionary arg))))
+            (apply #'format output-stream format-string format-args)))
          (:iteration
           (dolist (item (ref1 dictionary (ref1 chunk :sequence)))
             (apply-template (ref1 chunk :body) item output-stream)))
