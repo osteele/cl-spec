@@ -1,7 +1,12 @@
+;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
+
 ;; This is a quick and dirty hack that does just enough to make html
-;; output from cl-spec easy.  It should
+;; output from cl-spec easy.  A proper implementation would compile
+;; to a function, as well as use a proper parser.
 
 (defun copy-template (source-pathname target-pathname dictionary)
+  "Copy the contents of SOURCE-PATHNAME to TARGET-PATHNAME, interpolating
+${expr} constructs against the environment in DICTIONARY."
   (let* ((template (read-template source-pathname)))
     (with-open-file (s target-pathname :direction :output :if-exists :supersede)
       (apply-template template dictionary s))))
@@ -30,11 +35,11 @@
                     else
                     collect `(,token ,@body))))))
 
-;; note: doesn't know to avoid punctuation in strings
+;; FIXME: doesn't know to avoid punctuation in strings
 (defun read-template (pathname)
     (let ((stack nil)
           (chunks nil)
-          (current nil))
+          context)
       ;; Hand-crafted state-machine parser.  Run away!  Run away!
       ;; (More realistically, find a version of yacc or ragel that's
       ;; not too heavy-weight.)
@@ -47,21 +52,22 @@
                     (process-line (subseq line pos) crlf))
                    ("${"
                     (begin-interpolation (subseq line 2) crlf))
-                   ("}"
+                   ("$}"
                     (end-iteration)
-                    (process-line (subseq line 1) crlf))))
+                    (process-line (subseq line 2) crlf))))
                (literal (string crlf)
-                 (push string chunks)
+                 (unless (string= string "")
+                   (push string chunks))
                  (if crlf
-                     (push #.(format nil "~%") chunks)))
+                     (push #\newline chunks)))
                (begin-interpolation (string crlf)
                  (with-next-substring (string pos)
                    ("}"
-                    (interpoland (subseq string 0 pos))
+                    (compile-interpolation (subseq string 0 pos))
                     (process-line (subseq string (1+ pos)) crlf))
                    (t
-                    (begin-iteration string))))
-               (interpoland (string)
+                    (begin-iteration string crlf))))
+               (compile-interpolation (string)
                  (with-next-substring (string pos)
                    ("|"
                     (push {:type :format
@@ -74,33 +80,63 @@
                           }
                           chunks))
                    (t
-                    (push (intern (string-upcase string)) chunks)))))
+                    (push (intern (string-upcase string)) chunks))))
+               (begin-iteration (string crlf)
+                 (with-next-substring (string pos)
+                   ("=>"
+                    (let ((variable (intern (string-upcase (trim (subseq string 0 pos)))))
+                          (residue (subseq string (+ pos 2))))
+                      (push (cons chunks context) stack)
+                      (setf chunks nil
+                            context {:type :iteration :sequence-variable variable}
+)
+                      (process-line residue crlf)))
+                   (t
+                    (error "unrecognized interpolation format: ~S" string))))
+               (end-iteration ()
+                 (let ((iterator context))
+                   (destructuring-bind (previous-chunks . previous-context)
+                       (pop stack)
+                     (setref context :body (nreverse chunks))
+                     (setf chunks previous-chunks
+                           context previous-context)
+                     (push iterator chunks)))))
         (with-open-file (s pathname :direction :input)
           (map-lines #'process-line s)))
-      (nreverse chunks)))
+      (nreverse chunks))
+    )
 
 (defun apply-template (template &optional (dictionary {}) (output-stream t))
   (if (stringp template)
       (setf template (read-template template)))
-  (dolist (chunk template)
-    (typecase chunk
-      (string
-       (princ chunk output-stream))
-      (symbol
-       (princ (ref1 dictionary chunk) output-stream))
-      (t
-       (case (ref1 chunk :type)
-         (:format
-          (let ((format-string (ref1 chunk :format-string))
-                (format-args
-                 (loop for arg in (ref1 chunk :format-args)
-                    collect (ref1 dictionary arg))))
-            (apply #'format output-stream format-string format-args)))
-         (:iteration
-          (dolist (item (ref1 dictionary (ref1 chunk :sequence)))
-            (apply-template (ref1 chunk :body) item output-stream)))
-         (t
-          (error "don't know that format")))))))
+  (labels ((lookup (symbol)
+             (ref1 dictionary symbol)))
+    (dolist (chunk template)
+      (flet ((field (symbol)
+               (ref1 chunk symbol)))
+        (typecase chunk
+          ((or string character)
+           (princ chunk output-stream))
+          (symbol
+           (princ (ref1 dictionary chunk) output-stream))
+          (t
+           (case (ref1 chunk :type)
+             (:format
+              (let ((format-string (field :format-string))
+                    (format-args (mapcar #'lookup (field :format-args))))
+                (apply #'format output-stream format-string format-args)))
+             (:iteration
+              (let ((sequence (lookup (field :sequence-variable)))
+                    (body (field :body)))
+                (dolist (item sequence)
+                  (apply-template body item output-stream))))
+             (t
+              (error "don't know that format")))))))))
+
+
+;;
+;; Some utilities --- move these to their own file
+;;
 
 (define-method (trim (s string))
   (flet ((whitespace-char-p (char)
