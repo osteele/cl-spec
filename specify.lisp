@@ -22,33 +22,13 @@ for DEFINE-SPECIFICATION to collect into.")
 (deftype list-type (&optional (type t))
   `(and list (or null (cons ,type))))
 
-;; The SPECIFICATION class.
+;; DEFINE-SPECIFICATION instantiates this.  It holds a list of named
+;; examples.
 (define-class specification name
   (setup nil (or function null)) ; a function to run before each example
   (examples nil (list-type (cons string function))))
 
 (define-print-method (specification name) "#<specification ~S>" name)
-
-(define-method (run-specification (self specification) &key onsuccess onerror)
-  "Test all the examples, and returns a list of dictionaries {:name, :success, :condition, :time}.
-
-Applies ONSUCCESS or ONERROR to each one, depending on whether it
-passes.  Callbacks are used so that the caller can show incremental
-progress during execution."
-  (flet ((run-example (name fn)
-           (if (specification-setup self)
-               (funcall (specification-setup self)))
-           (handler-case (progn
-                           (funcall fn)
-                           (if onsuccess
-                               (funcall onsuccess name))
-                           t)
-             (expectation-not-met (condition)
-               (if onerror
-                   (funcall onerror name condition))
-               nil))))
-    (loop for (name . fn) in (specification-examples self)
-       collect (cons name (run-example name fn)))))
 
 (defmacro define-specification (name values &body body)
   "Define a SPECIFICATION, with a name, variables, and a list of examples.
@@ -77,18 +57,55 @@ subdirectory for examples in Lisp syntax."
              (run-specification spec)
              spec)))))
 
+;; TODO: reify result's type?
+;; TODO: separate classes for container (<-children) and leaf (<-spec and results)
+(define-class specification-results specification
+  (elapsed-time 0 number)             ; in seconds
+  (children nil list)
+  (results nil list))
+
+
+;;;
+;;; Running
+;;;
+
+(define-method (run-specification (self specification) &key onsuccess onerror)
+  "Test all the examples, and returns a list of dictionaries {:name, :success, :condition, :time}.
+
+Applies ONSUCCESS or ONERROR to each one, depending on whether it
+passes.  Callbacks are used so that the caller can show incremental
+progress during execution."
+  (flet ((run-example (name fn)
+           "Returns values success and condition"
+           (if (specification-setup self)
+               (funcall (specification-setup self)))
+           (handler-case (progn
+                           (funcall fn)
+                           (if onsuccess
+                               (funcall onsuccess name))
+                           t)
+             (expectation-not-met (condition)
+               (if onerror
+                   (funcall onerror name condition))
+               (values nil condition)))))
+    (multiple-value-bind (results elapsed-time)
+        (with-elapsed-time
+          (loop for (name . fn) in (specification-examples self)
+             collect (multiple-value-bind (success condition)
+                         (run-example name fn)
+                         {:name name :success success :condition condition})))
+      (make-instance 'specification-results
+                     :specification self
+                     :elapsed-time elapsed-time
+                     :results results))))
+
+
 (defmacro with-collecting-specifications (&body body)
   `(let ((*collect-specifications* t)
          (*run-specifications* nil)
          (*specifications* nil))
      ,@body
      *specifications*))
-
-(defmacro with-elapsed-time (&body body)
-  (with-gensym t0
-    `(let ((,t0 (get-internal-real-time)))
-       ,@body
-       (/ (- (get-internal-real-time) ,t0) internal-time-units-per-second))))
 
 (define-method (run-specification (pathname pathname) &key onsuccess onerror)
   "Run the specifications in PATHNAME reporting results to standard output."
@@ -114,15 +131,32 @@ subdirectory for examples in Lisp syntax."
                                             (write-progress-char "F")))))))
       (format t "~%~%")
       (loop for (name . condition) in failures
-      for i upfrom 1
-      do (format t "~D)~%~A~%~A~%~%" i condition pathname))
+         for i upfrom 1
+         do (format t "~D)~%~A~%~A~%~%" i condition pathname))
       (format t "Finished in ~F seconds~%~%" elapsed-time)
       (format t "~D example~:P, ~D failure~:P" example-count (length failures))
       nil)))
+
+(define-method (run-specification (string string) &rest args &key onsuccess onerror)
+  (apply #'run-specification (pathname string) args))
 
 (define-method (specification-runner (pathname pathname) &key &allow-other-keys)
   "Run the specifications in PATHNAME reporting results to standard output."
   (run-specification pathname))
 
-(define-method (specification-runner (string string) &key &allow-other-keys)
-  (run-specification (pathname string)))
+(define-method (specification-runner (string string) &rest args &key &allow-other-keys)
+  (apply #'run-specification (pathname string) args))
+
+;;;
+;;; Formatters
+;;;
+
+(define-class specification-formatter)
+(define-class text-specification-formatter (specification-formatter))
+
+(define-method (format-specification-results
+                (formatter text-specification-formatter)
+                results
+                &key (output-stream t)
+                &allow-other-keys)
+  )
