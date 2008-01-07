@@ -66,8 +66,8 @@
            (apply matcher-class (append (list (eval expr)) args))))))
     (with-slots (args expr) e
       (if (equal (car args) 'not)
-      (not (match (cadr args) (cddr args) expr))
-      (match (car args) (cdr args) expr)))))
+          (not (match (cadr args) (cddr args) expr))
+          (match (car args) (cdr args) expr)))))
 
 ;; Matchers
 
@@ -91,10 +91,10 @@
        (message-forms (mapcar #'(lambda (suffix)
                       (concat-symbol (car args) suffix)) '("" "p" "-p" "?"))))
       (when (equal (car arguments) 'of)
-    (pop arguments)) ;; am I crazy?
+        (pop arguments)) ;; am I crazy?
       (dolist (form message-forms)
-    (when (respond-to? expr form arguments)
-      (return (eval `(,form ,expr ,@arguments))))))))
+        (when (respond-to? expr form arguments)
+          (return (eval `(,form ,expr ,@arguments))))))))
 
 (defclass raise (matcher)
   ())
@@ -107,7 +107,7 @@
                       (invoke-restart 'raises)
                       (invoke-restart 'donot)))))
       (eval `(progn
-           (eval ,expr)))
+               (eval ,expr)))
       nil)
       (raises (&optional v)
         (declare (ignore v))

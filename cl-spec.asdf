@@ -1,0 +1,16 @@
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
+
+(defpackage #:cl-spec-asd
+  (:use :cl :asdf))
+
+(in-package :cl-spec-asd)
+
+(defsystem "cl-spec"
+    :description "Behavioral Testing for Common Lisp."
+    :version "0.1"
+    :author "Oliver Steele <steele@osteele.com>; Yurii Rashkovskii"
+    :licence "unknown"
+    :components ((:file "cl-spec" :depends-on ("bdd"))
+                 (:file "bdd")
+                 ))
+
