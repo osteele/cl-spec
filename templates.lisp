@@ -106,10 +106,15 @@ ${expr} constructs against the environment in DICTIONARY."
       (nreverse chunks))
     )
 
+(defvar *trace-templates* nil)
+
 (defun apply-template (template &optional (dictionary {}) (output-stream t))
   (if (stringp template)
       (setf template (read-template template)))
   (labels ((lookup (key)
+             ;; FIXME: kludge
+             (unless (has-key-p dictionary key)
+               (setf key (intern (symbol-name key) :keyword)))
              (assert (has-key-p dictionary key) (key)
                      "The environment does not contain ~S (keys = ~S)"
                      key (keys dictionary))
@@ -124,18 +129,23 @@ ${expr} constructs against the environment in DICTIONARY."
           ((or string character)
            (princ chunk output-stream))
           (symbol
-           (format t "look up ~S" chunk)
-           (princ (ref1 dictionary chunk) output-stream))
+           (when *trace-templates*
+             (format t "looking up ~S -> ~S~%"
+                     chunk (ref1 dictionary chunk)))
+           (princ (lookup chunk) output-stream))
           (t
-           (case (ref1 chunk :type)
+           (case (field :type)
              (:format
-              (format t "format ~S" chunk)
+              (when *trace-templates*
+                (format t "formatting ~S~%" (field :format-args)))
               (let ((format-string (field :format-string))
                     (format-args (mapcar #'lookup (field :format-args))))
                 (apply #'format output-stream format-string format-args)))
              (:iteration
               (let ((sequence (lookup (field :sequence-variable)))
                     (body (field :body)))
+                (when *trace-templates*
+                  (format t "iterating over ~S~%" sequence))
                 (dolist (item sequence)
                   (apply-template body item output-stream))))
              (t

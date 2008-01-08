@@ -118,10 +118,13 @@
       </div>
 
       <div class="results">
+${children =>
         <div class="example_group">
           <dl>
             <dt class="failed">${name}</dt>
-            <dd class="spec passed"><span class="passed_spec_name">should pass</span></dd>
+${examples =>
+            <dd class="spec passed"><span class="passed_spec_name">${name}</span></dd>
+$}
             <dd class="spec failed">
               <span class="failed_spec_name">should fail</span>
               <div class="failure" id="failure_1">
@@ -129,15 +132,9 @@
                 got: 1 (using ==)</pre></div>
               </div>
             </dd>
-            <dd class="spec passed"><span class="passed_spec_name">should pass</span></dd>
           </dl>
         </div>
-        <div class="example_group">
-          <dl>
-            <dt id="example_group_2">another item</dt>
-            <dd class="spec passed"><span class="passed_spec_name">should pass</span></dd>
-          </dl>
-        </div>
+$}
       </div>
     </div>
   </body>

@@ -268,7 +268,8 @@ progress during execution."
                   (setref dict 'name
                           (specification-name (specification-results-specification results)))
                   (setref dict 'examples
-                          (mapcar #'translate-example (specification-results-examples results)))))))
+                          (mapcar #'translate-example (specification-results-examples results)))
+                  dict))))
           (translate-example (example)
             ;; it's already in dictionary form
             example))
