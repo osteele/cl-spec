@@ -108,7 +108,7 @@
   </head>
   <body>
     <div class="clspec-report">
-      <div id="clspec-header" class="failed">
+      <div id="clspec-header" class="${~[passed~;~:;failed~] | failures-count}">
         <h1>CL-spec Results</h1>
 
         <div id="summary">
@@ -121,17 +121,13 @@
 ${children =>
         <div class="example_group">
           <dl>
-            <dt class="failed">${name}</dt>
+            <dt class="${~[passed~;~:;failed~] | failures-count}">${name}</dt>
 ${examples =>
-            <dd class="spec passed"><span class="passed_spec_name">${name}</span></dd>
-$}
-            <dd class="spec failed">
-              <span class="failed_spec_name">should fail</span>
-              <div class="failure" id="failure_1">
-                <div class="message"><pre>expected: 2,
-                got: 1 (using ==)</pre></div>
-              </div>
+            <dd class="spec ${~:[failed~;passed~] | success}">
+              <span>${name}</span>
+                <div class="message"><pre>${~@[~A~] | condition}</pre></div>
             </dd>
+$}
           </dl>
         </div>
 $}

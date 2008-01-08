@@ -6,7 +6,8 @@
 tests.rb
 bdd-example.lisp
 outtakes.lisp
+agenda.txt
 
 # output files
 *.fasl
-spec.html
+examples/*.html

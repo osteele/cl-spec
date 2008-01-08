@@ -1,6 +1,6 @@
 (define-specification "plus" ()
   ("should add two numbers"
-   (=> (+ 1 2) should = 4))
+   (=> (+ 1 2) should = 3))
   ("should add three numbers"
    (=> (+ 1 2 3) should = 6))
   ("should be commutative"

@@ -157,7 +157,7 @@ show incremental progress during execution."
          (*run-specifications* nil)
          (*specifications* nil))
      ,@body
-     *specifications*))
+     (nreverse *specifications*)))
 
 ;; FIXME: this shouldn't be in the same gf as the method on SPECIFICATION
 (define-method (run-specification (pathname pathname)
