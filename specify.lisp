@@ -53,7 +53,10 @@ subdirectory for examples in Lisp syntax."
          (if *collect-specifications*
              (push spec *specifications*))
          (if *run-specifications*
-             (run-specification spec)
+             ;; quick summary for the status line:
+             (format-specification-results
+              (make-instance 'status-line-specification-formatter)
+              (run-specification spec))
              spec)))))
 
 

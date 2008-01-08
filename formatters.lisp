@@ -1,15 +1,12 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
-;;;
-;;; Formatters
-;;;
-
-(defvar *html-spec-parameter-pathname*
-  (merge-pathnames "template.html" *load-pathname*)
-  "The :FORMAT 'HTML option to RUN-SPECIFICATION starts with this.")
-
 
 (define-class specification-formatter)
+
+;;;
+;;; Plain Text Formatter
+;;;
+
 (define-class text-specification-formatter (specification-formatter))
 
 (define-method (format-specification-results
@@ -27,6 +24,34 @@
   (format output-stream "~D example~:P, ~D failure~:P"
           (specification-results-examples-count results)
           (specification-results-failures-count results)))
+
+
+;;;
+;;; Status line formatter
+;;;
+
+(define-class status-line-specification-formatter (specification-formatter))
+
+(define-method (format-specification-results
+                (formatter status-line-specification-formatter)
+                results
+                &key
+                &allow-other-keys)
+  (if (zerop (specification-results-failures-count results))
+      (format nil "~D examples passed"
+              (specification-results-examples-count results))
+      (format nil "~D failures: ~{~A~^, ~}"
+              (specification-results-failures-count results)
+              (loop for example in (specification-results-failures results)
+                   collect (ref1 example :name)))))
+
+;;;
+;;; HTML Formatter
+;;;
+
+(defvar *html-spec-parameter-pathname*
+  (merge-pathnames "template.html" *load-pathname*)
+  "The :FORMAT 'HTML option to RUN-SPECIFICATION starts with this.")
 
 (define-class html-specification-formatter (specification-formatter))
 
