@@ -10,3 +10,13 @@
              (/ (- (get-internal-real-time) ,t0) internal-time-units-per-second)
                 'float)))
        (values value elapsed-time))))
+
+(defmacro define-accumulating-method ((function-name (self type) &rest args)
+                                      accumulation-construct)
+  (let ((value-reader function-name)
+        (child-reader (or (getf args :child-reader)
+                          (concatenate-symbol type "-CHILDREN")))
+        (child (gensym "child")))
+    `(define-method (,function-name (,self ,type))
+       (loop for ,child in (,child-reader ,self)
+            ,accumulation-construct (,value-reader ,child)))))

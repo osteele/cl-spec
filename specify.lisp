@@ -57,12 +57,62 @@ subdirectory for examples in Lisp syntax."
              (run-specification spec)
              spec)))))
 
-;; TODO: reify result's type?
-;; TODO: separate classes for container (<-children) and leaf (<-spec and results)
-(define-class specification-results specification
-  (elapsed-time 0 number)             ; in seconds
-  (children nil list)
-  (results nil list))
+
+;;;
+;;; Specification results
+;;;
+
+(define-class abstract-specification-results)
+
+(defclass specification-results-group (abstract-specification-results)
+  ((children :initarg :children
+             :reader specification-results-children
+             :type (list-type abstract-specification-results))))
+
+;; these are naive implementations which wouldn't work for large sets,
+;; but they work fine for now.
+
+(define-accumulating-method (specification-results-examples
+                             (self abstract-specification-results)
+                             :child-reader specification-results-children)
+    append)
+
+(define-accumulating-method (specification-results-failures
+                             (self abstract-specification-results)
+                             :child-reader specification-results-children)
+    append)
+
+(define-accumulating-method (specification-results-elapsed-time
+                             (self abstract-specification-results)
+                             :child-reader specification-results-children)
+    sum)
+
+(define-method (specification-results-examples-length
+                (self abstract-specification-results))
+  (length (specification-results-examples self)))
+
+(define-method (specification-results-failures-length
+                (self abstract-specification-results))
+  (length (specification-results-failures self)))
+
+
+;; TODO: reify example's type?
+(defclass specification-results (abstract-specification-results)
+  ((specification :initarg :specification
+                  :type specification)
+   (elapsed-time :initarg :elapsed-time
+                 :reader specification-results-elapsed-time)
+   (examples :initarg :examples :reader specification-results-examples)))
+
+(define-method (specification-result-failures (results specification-results))
+  (loop for example in (specification-results-examples results)
+       if (ref1 example :success)
+       collect example))
+
+;(define-accumulating-method (specification-result-elapsed-time
+;                             (results specification-results)
+;                             :child-reader specification-results-examples)
+;    sum)
 
 
 ;;;
@@ -97,7 +147,7 @@ progress during execution."
       (make-instance 'specification-results
                      :specification self
                      :elapsed-time elapsed-time
-                     :results results))))
+                     :examples results))))
 
 
 (defmacro with-collecting-specifications (&body body)
@@ -110,34 +160,39 @@ progress during execution."
 (define-method (run-specification (pathname pathname) &key onsuccess onerror)
   "Run the specifications in PATHNAME reporting results to standard output."
   (declare (ignore onsuccess onerror))
-  (flet ((write-progress-char (char)
-           (format t char)
-           (force-output)))
+  (labels ((write-progress-char (char)
+             (format t char)
+             (force-output))
+           (note-success (&rest rest)
+             (declare (ignore rest))
+             (write-progress-char "."))
+           (note-failure (&rest rest)
+             (declare (ignore rest))
+             (write-progress-char "F")))
     (let* ((specifications
             (with-collecting-specifications
               (load pathname)))
-    (example-count 0)
-    (failures nil)
-    (elapsed-time
-     (with-elapsed-time
-       (for spec in specifications
-         do (incf example-count (length (specification-examples spec)))
-         do (run-specification spec
-                               :onsuccess #'(lambda (name)
-                                              (declare (ignore name))
-                                              (write-progress-char "."))
-                               :onerror #'(lambda (name condition)
-                                            (push `(,name . ,condition) failures)
-                                            (write-progress-char "F")))))))
+           (child-results
+            (loop for spec in specifications
+               do (run-specification spec
+                                     :onsuccess #'note-success
+                                     :onerror #'note-failure)))
+           (results
+            (make-instance 'specification-results-group
+                           :children child-results)))
       (format t "~%~%")
-      (loop for (name . condition) in failures
+      (loop for (name . condition) in (specification-results-failures results)
          for i upfrom 1
          do (format t "~D)~%~A~%~A~%~%" i condition pathname))
-      (format t "Finished in ~F seconds~%~%" elapsed-time)
-      (format t "~D example~:P, ~D failure~:P" example-count (length failures))
+      (format t "Finished in ~F seconds~%~%"
+              (specification-results-elapsed-time results))
+      (format t "~D example~:P, ~D failure~:P"
+              (specification-results-examples-length results)
+              (specification-results-failures-length results))
       nil)))
 
 (define-method (run-specification (string string) &rest args &key onsuccess onerror)
+  (declare (ignore onsuccess onerror))
   (apply #'run-specification (pathname string) args))
 
 (define-method (specification-runner (pathname pathname) &key &allow-other-keys)
