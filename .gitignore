@@ -1,0 +1,12 @@
+# editor
+\#*\#
+.\#*
+
+# local reference
+tests.rb
+bdd-example.lisp
+outtakes.lisp
+
+# output files
+*.fasl
+spec.html

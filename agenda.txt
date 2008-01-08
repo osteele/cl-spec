@@ -1,0 +1,73 @@
+* next
+- html output
+
+** html output
+- replace >{elapsed-time} => format ~A
+- replace ~D example | n => (format "~D example" n)
+- find an element where {example <- examples}; make one copy each
+
+
+* completion
+- change status line version to use status-formatter
+- documentation
+- run on dict
+
+* maybe
+- show backtrace
+
+* later
+- move variable initialization to each time
+
+* features
+- load set of files
+- integrate with huchentoot
+- profile: show 10 slowest examples
+- specdoc: testname:\n{example name} (FAILED - n)
+- other option: reverse, [more]
+
+* literacy
+- make spec-runner class
+- should it define a class, which knows how to run itself?
+- should it expand to defclass, with an initarg of tests?
+- show tests
+
+* rspec web runner
+- directory of specs
+- server dummy page
+
+
+
+
+;; note: doesn't know to avoid punctuation in strings
+(defun read-template (pathname)
+  (with-open-file (s source :direction :input)
+    (let ((stack nil)
+          (chunks nil)
+          (current nil))
+      ;; Hand-crafted state-machine parser.  Run away!  Run away!
+      ;; (More realistically, figure out how this should have been
+      ;; written.)
+      (labels ((process-line (line &optional (crlf t))
+                 (let ((start-pos (search "${" line))
+                       (end-pos (search "}" line))
+                       (min (if (or start-pos end-pos)
+                                (apply #'min
+                                       (delete nil '(start-pos end-pos))))))
+                   (cond ((not min)
+                          (literal line crlf))
+                         ((< 0 min)
+                          (process-line (subseq line 0 min) nil)
+                          (process-line (subseq line min) crlf))
+                         ((zerop start-pos)
+                          (begin-interpolation (subseq line 2) crlf))
+                         (t ; (zerop end-pos)
+                          (end-interpolation (subseq line 2) crlf)))))
+               (literal (string crlf)
+                 (push string chunks)
+                 (if crlf
+                     (push #.(format nil "~%") chunks)))
+               (begin-interpolation (string crlf)
+                 (let ((lbracket-pos (search "${" string) )
+                       (rbracket-pos (search "}" string))
+                       (pipe-pos (search "|" string))
+                       ()

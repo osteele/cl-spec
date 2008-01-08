@@ -87,11 +87,11 @@ subdirectory for examples in Lisp syntax."
                              :child-reader specification-results-children)
     sum)
 
-(define-method (specification-results-examples-length
+(define-method (specification-results-examples-count
                 (self abstract-specification-results))
   (length (specification-results-examples self)))
 
-(define-method (specification-results-failures-length
+(define-method (specification-results-failures-count
                 (self abstract-specification-results))
   (length (specification-results-failures self)))
 
@@ -99,6 +99,7 @@ subdirectory for examples in Lisp syntax."
 ;; TODO: reify example's type?
 (defclass specification-results (abstract-specification-results)
   ((specification :initarg :specification
+                  :reader specification-results-specification
                   :type specification)
    (elapsed-time :initarg :elapsed-time
                  :reader specification-results-elapsed-time)
@@ -201,6 +202,7 @@ progress during execution."
 (define-method (specification-runner (string string) &rest args &key &allow-other-keys)
   (apply #'run-specification (pathname string) args))
 
+
 ;;;
 ;;; Formatters
 ;;;
@@ -220,14 +222,48 @@ progress during execution."
   (format output-stream "Finished in ~F seconds~%~%"
           (specification-results-elapsed-time results))
   (format output-stream "~D example~:P, ~D failure~:P"
-          (specification-results-examples-length results)
-          (specification-results-failures-length results)))
+          (specification-results-examples-count results)
+          (specification-results-failures-count results)))
 
 (define-class html-specification-formatter (specification-formatter))
+
+(defvar *html-spec-parameter-pathname*
+  (merge-pathnames "template.html" *load-pathname*)
+  "The :FORMAT 'HTML option to RUN-SPECIFICATION starts with this.")
 
 (define-method (format-specification-results
                 (formatter html-specification-formatter)
                 results
                 &key
                 &allow-other-keys)
-  (format t "html"))
+  ;; for now, the group hierarchy must be exactly one deep
+  (labels ((translate-results (results depth)
+             (etypecase results
+               (specification-results-group
+                (assert (= depth 0) () "for now, groups can't be nested")
+                {failures
+                (specification-results-failures-count results)
+                elapsed-time
+                (specification-results-elapsed-time results)
+                children
+                (loop for child in (specification-results-children results)
+                   collect (translate-results child (1+ depth)))
+                })
+               (specification-results
+                (assert (= depth 1) ()
+                        "for now, specification result leaves must be exactly one deep")
+                {name
+                (specification-name (specification-results-specification results))
+                failures
+                (specification-results-failures-count results)
+                elapsed-time
+                (specification-results-elapsed-time results)
+                examples
+                (mapcar #'translate-example (specification-results-examples results))
+                })))
+          (translate-example (example)
+            ;; it's already in dictionary form
+            example))
+    (copy-template *html-spec-parameter-pathname*
+                   (merge-pathnames "spec.html" *html-spec-parameter-pathname*)ls
+                   (translate-results results 0))))

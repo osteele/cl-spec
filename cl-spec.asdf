@@ -9,6 +9,7 @@
     :author "Oliver Steele <steele@osteele.com>"
     :licence "unknown"
     :components ((:file "cl-spec" :depends-on ("bdd" "utilities"))
-                 (:file "bdd")
-                 (:file "utilities"))
+                 (:file "templates" :depends-on ("utilities"))
+                 (:file "utilities")
+                 (:file "bdd"))
     :depends-on (:lexicons))

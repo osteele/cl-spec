@@ -1,5 +1,22 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
+(define-method (trim (s string))
+  (flet ((whitespace-char-p (char)
+           (or(char= #\space char) (not (graphic-char-p char)))))
+    (let ((start (position-if-not #'whitespace-char-p s))
+          (end (position-if-not #'whitespace-char-p s :from-end t)))
+      (cond ((not start)
+             "")
+            ((and (= 0 start) (= end (1- (length s))))
+             s)
+            (t
+             (subseq s start (1+ end)))))))
+
+(defun map-lines (fn input-stream)
+  (do ((line (read-line input-stream) (read-line input-stream nil 'eof)))
+      ((eq line 'eof))
+    (funcall fn line)))
+
 (defmacro with-elapsed-time (&body body)
   "Same as PROGN, but returns the elapsed time in seconds as a second value."
   (with-gensym t0

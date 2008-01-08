@@ -1,8 +1,8 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
-;; This is a quick and dirty hack that does just enough to make html
-;; output from cl-spec easy.  A proper implementation would compile
-;; to a function, as well as use a proper parser.
+;; A quick and dirty template facilityq that does just enough to
+;; enable HTML output from cl-spec.  A proper implementation would
+;; compile to a function, as well as use a proper parser.
 
 (defun copy-template (source-pathname target-pathname dictionary)
   "Copy the contents of SOURCE-PATHNAME to TARGET-PATHNAME, interpolating
@@ -132,25 +132,3 @@ ${expr} constructs against the environment in DICTIONARY."
                   (apply-template body item output-stream))))
              (t
               (error "don't know that format")))))))))
-
-
-;;
-;; Some utilities --- move these to their own file
-;;
-
-(define-method (trim (s string))
-  (flet ((whitespace-char-p (char)
-           (or(char= #\space char) (not (graphic-char-p char)))))
-    (let ((start (position-if-not #'whitespace-char-p s))
-          (end (position-if-not #'whitespace-char-p s :from-end t)))
-      (cond ((not start)
-             "")
-            ((and (= 0 start) (= end (1- (length s))))
-             s)
-            (t
-             (subseq s start (1+ end)))))))
-
-(defun map-lines (fn input-stream)
-  (do ((line (read-line input-stream) (read-line input-stream nil 'eof)))
-      ((eq line 'eof))
-    (funcall fn line)))
