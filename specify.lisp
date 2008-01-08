@@ -104,10 +104,10 @@ subdirectory for examples in Lisp syntax."
                  :reader specification-results-elapsed-time)
    (examples :initarg :examples :reader specification-results-examples)))
 
-(define-method (specification-result-failures (results specification-results))
-  (loop for example in (specification-results-examples results)
-       if (ref1 example :success)
-       collect example))
+(define-method (specification-results-failures (self specification-results))
+  (loop for example in (specification-results-examples self)
+     unless (ref1 example :success)
+     collect example))
 
 ;(define-accumulating-method (specification-result-elapsed-time
 ;                             (results specification-results)
@@ -157,9 +157,12 @@ progress during execution."
      ,@body
      *specifications*))
 
-(define-method (run-specification (pathname pathname) &key onsuccess onerror)
+;; FIXME: this shouldn't be in the same gf as the method on SPECIFICATION
+(define-method (run-specification (pathname pathname)
+                                  &rest args
+                                  &key
+                                  (format 'text))
   "Run the specifications in PATHNAME reporting results to standard output."
-  (declare (ignore onsuccess onerror))
   (labels ((write-progress-char (char)
              (format t char)
              (force-output))
@@ -169,30 +172,26 @@ progress during execution."
            (note-failure (&rest rest)
              (declare (ignore rest))
              (write-progress-char "F")))
-    (let* ((specifications
+    (let* ((formatter-class
+            (concatenate-symbol format "-SPECIFICATION-FORMATTER"))
+           (specifications
             (with-collecting-specifications
               (load pathname)))
-           (child-results
+           (results-children
             (loop for spec in specifications
-               do (run-specification spec
+               collect (run-specification spec
                                      :onsuccess #'note-success
                                      :onerror #'note-failure)))
            (results
             (make-instance 'specification-results-group
-                           :children child-results)))
-      (format t "~%~%")
-      (loop for (name . condition) in (specification-results-failures results)
-         for i upfrom 1
-         do (format t "~D)~%~A~%~A~%~%" i condition pathname))
-      (format t "Finished in ~F seconds~%~%"
-              (specification-results-elapsed-time results))
-      (format t "~D example~:P, ~D failure~:P"
-              (specification-results-examples-length results)
-              (specification-results-failures-length results))
-      nil)))
+                           :children results-children)))
+      (apply #'format-specification-results
+       (make-instance formatter-class)
+       results
+       :pathname pathname
+       args))))
 
-(define-method (run-specification (string string) &rest args &key onsuccess onerror)
-  (declare (ignore onsuccess onerror))
+(define-method (run-specification (string string) &rest args &key &allow-other-keys)
   (apply #'run-specification (pathname string) args))
 
 (define-method (specification-runner (pathname pathname) &key &allow-other-keys)
@@ -212,6 +211,23 @@ progress during execution."
 (define-method (format-specification-results
                 (formatter text-specification-formatter)
                 results
-                &key (output-stream t)
+                &key (output-stream t) pathname
                 &allow-other-keys)
-  )
+  (format t "~%~%")
+  (loop for result in (specification-results-failures results)
+     for i upfrom 1
+     do (format output-stream "~D)~%~A~%~A~%~%" i (ref1 result :condition) pathname))
+  (format output-stream "Finished in ~F seconds~%~%"
+          (specification-results-elapsed-time results))
+  (format output-stream "~D example~:P, ~D failure~:P"
+          (specification-results-examples-length results)
+          (specification-results-failures-length results)))
+
+(define-class html-specification-formatter (specification-formatter))
+
+(define-method (format-specification-results
+                (formatter html-specification-formatter)
+                results
+                &key
+                &allow-other-keys)
+  (format t "html"))
