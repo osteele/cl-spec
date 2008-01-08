@@ -1,5 +1,5 @@
 * Features
-- show backtrace
+- show more information about errors
 - more examples
 - load set of files
 - profile: show 10 slowest examples

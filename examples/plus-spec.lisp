@@ -1,3 +1,5 @@
+;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
+
 (define-specification "plus" ()
   ("should add two numbers"
    (=> (+ 1 2) should = 3))

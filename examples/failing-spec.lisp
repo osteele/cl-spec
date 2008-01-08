@@ -1,3 +1,5 @@
+;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
+
 (define-specification "failure" ()
   ("should pass"
    (=> (+ 1 2) should = 3))
