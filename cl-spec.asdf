@@ -8,7 +8,9 @@
     :version "0.1"
     :author "Oliver Steele <steele@osteele.com>"
     :licence "unknown"
-    :components ((:file "cl-spec" :depends-on ("bdd" "utilities"))
+    :components ((:file "formatters"
+                        :depends-on ("specify" "utilities" "templates"))
+                 (:file "specify" :depends-on ("bdd" "utilities"))
                  (:file "templates" :depends-on ("utilities"))
                  (:file "utilities")
                  (:file "bdd"))

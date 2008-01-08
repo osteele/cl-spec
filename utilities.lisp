@@ -1,5 +1,10 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
+;; this doesn't really test that every element has type TYPE, but
+;; I don't think there's a way to do that in CL
+(deftype list-type (&optional (type t))
+  `(and list (or null (cons ,type))))
+
 (define-method (trim (s string))
   (flet ((whitespace-char-p (char)
            (or(char= #\space char) (not (graphic-char-p char)))))
@@ -11,6 +16,8 @@
              s)
             (t
              (subseq s start (1+ end)))))))
+
+(defsetf rref setref)
 
 ;; TODO: default slot-names by introspection
 (define-method (object->dictionary (object t) reader-names &key basename)
@@ -36,10 +43,17 @@
                 'float)))
        (values value elapsed-time))))
 
-(defmacro define-accumulating-method ((function-name (self type) &rest args)
-                                      accumulation-construct)
+(defmacro define-accumulating-method ((function-name (self type))
+                                      accumulation-construct
+                                      &key child-reader)
+  "Defines a method on FUNCTION-NAME, specialized on a first argument of TYPE,
+that uses ACCUMALATION-CONSTRUCT (a LOOP-friendly accumulation keyword) to
+accumulate the values of the projections of its children.
+
+Children are accessed via CHILD-READER, which defaults to {TYPE}-CHILDREN,
+and projected via FUNCTION-NAME."
   (let ((value-reader function-name)
-        (child-reader (or (getf args :child-reader)
+        (child-reader (or child-reader
                           (concatenate-symbol type "-CHILDREN")))
         (child (gensym "child")))
     `(define-method (,function-name (,self ,type))
