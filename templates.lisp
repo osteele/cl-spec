@@ -109,19 +109,27 @@ ${expr} constructs against the environment in DICTIONARY."
 (defun apply-template (template &optional (dictionary {}) (output-stream t))
   (if (stringp template)
       (setf template (read-template template)))
-  (labels ((lookup (symbol)
-             (ref1 dictionary symbol)))
+  (labels ((lookup (key)
+             (assert (has-key-p dictionary key) (key)
+                     "The environment does not contain ~S (keys = ~S)"
+                     key (keys dictionary))
+             (ref1 dictionary key)))
     (dolist (chunk template)
-      (flet ((field (symbol)
-               (ref1 chunk symbol)))
+      (flet ((field (key)
+               (assert (has-key-p chunk key) (key)
+                       "The context does not have a field named ~S (keys = ~S)"
+                       key (keys chunk))
+               (ref1 chunk key)))
         (typecase chunk
           ((or string character)
            (princ chunk output-stream))
           (symbol
+           (format t "look up ~S" chunk)
            (princ (ref1 dictionary chunk) output-stream))
           (t
            (case (ref1 chunk :type)
              (:format
+              (format t "format ~S" chunk)
               (let ((format-string (field :format-string))
                     (format-args (mapcar #'lookup (field :format-args))))
                 (apply #'format output-stream format-string format-args)))

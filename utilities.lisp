@@ -12,6 +12,14 @@
             (t
              (subseq s start (1+ end)))))))
 
+;; TODO: default slot-names by introspection
+(define-method (object->dictionary (object t) reader-names &key basename)
+  (plist->dictionary
+   (loop for reader-name in reader-names
+        collect reader-name
+        collect (funcall (concatenate-symbol basename "-" reader-name)
+                         object))))
+
 (defun map-lines (fn input-stream)
   (do ((line (read-line input-stream) (read-line input-stream nil 'eof)))
       ((eq line 'eof))

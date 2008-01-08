@@ -241,29 +241,37 @@ progress during execution."
              (etypecase results
                (specification-results-group
                 (assert (= depth 0) () "for now, groups can't be nested")
-                {failures
-                (specification-results-failures-count results)
-                elapsed-time
-                (specification-results-elapsed-time results)
-                children
-                (loop for child in (specification-results-children results)
-                   collect (translate-results child (1+ depth)))
-                })
+                ;; TODO: would be nicer with a general serialization
+                ;; mechanism instead of adding keys afterwards; or
+                ;; else maybe the templater should use accessors
+                ;; instead of dictionary conversion
+                (let ((dict
+                       (object->dictionary results
+                                          '(examples-count
+                                            failures-count
+                                            elapsed-time)
+                                          :basename 'specification-results)))
+                  (setref dict 'name
+                          (specification-name (specification-results-specification (first (specification-results-children results)))))
+                  (setref dict 'children
+                          (loop for child in (specification-results-children results)
+                             collect (translate-results child (1+ depth))))
+                  dict))
                (specification-results
                 (assert (= depth 1) ()
                         "for now, specification result leaves must be exactly one deep")
-                {name
-                (specification-name (specification-results-specification results))
-                failures
-                (specification-results-failures-count results)
-                elapsed-time
-                (specification-results-elapsed-time results)
-                examples
-                (mapcar #'translate-example (specification-results-examples results))
-                })))
+                (let ((dict
+                       (object->dictionary results '(examples-count
+                                                     failures-count
+                                                     elapsed-time)
+                                           :basename 'specification-results)))
+                  (setref dict 'name
+                          (specification-name (specification-results-specification results)))
+                  (setref dict 'examples
+                          (mapcar #'translate-example (specification-results-examples results)))))))
           (translate-example (example)
             ;; it's already in dictionary form
             example))
     (copy-template *html-spec-parameter-pathname*
-                   (merge-pathnames "spec.html" *html-spec-parameter-pathname*)ls
+                   (merge-pathnames "spec.html" *html-spec-parameter-pathname*)
                    (translate-results results 0))))

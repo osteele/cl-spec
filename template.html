@@ -112,15 +112,15 @@
         <h1>CL-spec Results</h1>
 
         <div id="summary">
-          <p id="totals">{~D example~:P, ~D failure~:P | example-count failure-count}</p>
-          <p id="duration">Finished in <strong>{elapsed-time} seconds</strong></p>
+          <p id="totals">${~D example~:P, ~D failure~:P | examples-count failures-count}</p>
+          <p id="duration">Finished in <strong>${elapsed-time} seconds</strong></p>
         </div>
       </div>
 
       <div class="results">
         <div class="example_group">
           <dl>
-            <dt class="failed">an item</dt>
+            <dt class="failed">${name}</dt>
             <dd class="spec passed"><span class="passed_spec_name">should pass</span></dd>
             <dd class="spec failed">
               <span class="failed_spec_name">should fail</span>
