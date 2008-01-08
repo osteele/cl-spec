@@ -38,9 +38,9 @@
                 &key
                 &allow-other-keys)
   (if (zerop (specification-results-failures-count results))
-      (format nil "~D examples passed"
+      (format nil "~D example~:P passed"
               (specification-results-examples-count results))
-      (format nil "~D failures: ~{~A~^, ~}"
+      (format nil "~D failure~:P: ~{~A~^, ~}"
               (specification-results-failures-count results)
               (loop for example in (specification-results-failures results)
                    collect (ref1 example :name)))))

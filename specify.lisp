@@ -29,22 +29,28 @@ of named examples."))
 
 (define-print-method (specification name) "#<specification ~S>" name)
 
-(defmacro define-specification (name values &body body)
+(defmacro define-specification (name bindings &body body)
   "Define a SPECIFICATION, with a name, variables, and a list of examples.
 See the documentation for Ruby rspec or JavaScript jsspec for an
 overview on how this works; see the examples in the examples/
 subdirectory for examples in Lisp syntax."
   (let* ((before nil)
+         (variables
+          (loop for binding in bindings
+               if (symbolp binding)
+               collect binding
+               else collect (car binding)
+               and do (setf before (nconc before `((setq ,(car binding) ,(cadr binding)))))))
          (specs
           (loop for item in body
              if (stringp (first item))
              collect item
              else if (and (eq (car item) 'before) (eq (cadr item) :each))
-             do (setf before (cddr item))))
+             do (setf before (nconc before (cddr item)))))
          (examples
           (loop for item in specs
              collect ``(,,(car item) . ,#'(lambda () ,@(cdr item))))))
-    `(let ,values
+    `(let ,variables
        (let ((spec
               (make-instance 'specification
                              :name ,name
@@ -139,7 +145,7 @@ show incremental progress during execution."
                            (if onsuccess
                                (funcall onsuccess name))
                            t)
-             (expectation-not-met (condition)
+             (t (condition)
                (if onerror
                    (funcall onerror name condition))
                (values nil condition)))))
@@ -167,7 +173,7 @@ show incremental progress during execution."
                                   &rest args
                                   &key
                                   (format 'text))
-  "Run the specifications in PATHNAME reporting results to standard output."
+  "Run the specifications in PATHNAME reporting ,results to standard output."
   (labels ((write-progress-char (char)
              (format t char)
              (force-output))

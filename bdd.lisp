@@ -1,6 +1,8 @@
 ;;; Author: Yurii Rashkovskii
 ;;; Source: http://rashkovskii.com/lisp
-;;; Fixed compiler errors and warnings --- Oliver Steele 2008-01-05
+
+;;; ows 2008-01-05 -- fixed compiler errors and warnings
+;;; ows 2008-01-08 -- eval -> funcall, to capture lexical scope
 
 ;; Utilities
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -42,32 +44,40 @@
 ;; Conditions
 
 (define-condition expectation-not-met ()
-  ())
+  ((expectation :initarg :expectation :reader expectation)
+   (form :initarg :form :reader expectation-form)))
 
 ;; Expectations
 (defclass expectation ()
-  ((expr :initarg :expr :reader expression-of)
+  ((value-fn :initarg :value-fn :reader value-fn-of)
+   (value :accessor value-of)
    (args :initarg :args :reader args-of)))
 
 (defclass should (expectation)
   ())
 
+(defmethod evaluate ((e expectation))
+  (setf (value-of e) (funcall (value-fn-of e))))
+
 (defgeneric fulfills? (expectation))
 
 (defmethod fulfills? ((e should))
-  (flet ((match (matcher-class args expr)
-       (restart-case
+  (flet ((match (matcher-class args)
+           (restart-case
            (handler-bind ((simple-error #'(lambda (c)
-                        (declare (ignore c))
-                        (invoke-restart 'fun))))
-         (matches? (make-instance matcher-class :args args) expr))
-         (fun (&optional v)
-           (declare (ignore v))
-           (apply matcher-class (append (list (eval expr)) args))))))
-    (with-slots (args expr) e
-      (if (equal (car args) 'not)
-          (not (match (cadr args) (cddr args) expr))
-          (match (car args) (cdr args) expr)))))
+                                            (declare (ignore c))
+                                            (invoke-restart 'fun))))
+             (matches? (make-instance matcher-class :args args) e))
+           (fun (&optional v)
+             ;; This happens when matcher-class doesn't actually name
+             ;; a class; e.g. (=> 1 should = 1) instead of
+             ;; (=> 0 should be zero)
+             (declare (ignore v))
+             (apply matcher-class (append (list (evaluate e)) (mapcar #'eval args)))))))
+    (with-slots (args) e
+      (if (eq (car args) 'not)
+          (not (match (cadr args) (cddr args)))
+          (match (car args) (cdr args))))))
 
 ;; Matchers
 
@@ -87,46 +97,53 @@
 
 (defmethod matches? ((matcher be) expr)
   (with-slots (args) matcher
-    (let* ((arguments (cdr args))
-       (message-forms (mapcar #'(lambda (suffix)
-                      (concat-symbol (car args) suffix)) '("" "p" "-p" "?"))))
+    (let* ((value (evaluate expr))
+           (arguments (cdr args))
+           (message-forms (mapcar #'(lambda (suffix)
+                                      (concat-symbol (car args) suffix))
+                                  '("" "p" "-p" "?"))))
       (when (equal (car arguments) 'of)
         (pop arguments)) ;; am I crazy?
-      (dolist (form message-forms)
-        (when (respond-to? expr form arguments)
-          (return (eval `(,form ,expr ,@arguments))))))))
+      (setf arguments (mapcar #'eval arguments))
+      (some #'(lambda (form)
+                (and (respond-to? value form arguments)
+                     (apply form value arguments)))
+            message-forms))))
 
 (defclass raise (matcher)
   ())
 
-(defmethod matches? ((matcher raise) expr)
+(defmethod matches? ((matcher raise) e)
   (with-slots (args) matcher
-    (restart-case
-    (handler-bind ((t #'(lambda (c)
-                  (if (equal (class-of c) (find-class (car args)))
-                      (invoke-restart 'raises)
-                      (invoke-restart 'donot)))))
-      (eval `(progn
-               (eval ,expr)))
-      nil)
-      (raises (&optional v)
-        (declare (ignore v))
-        t)
-      (donot (&optional v)
-        (declare (ignore v))
-        nil))))
+    (let ((class-name (car args)))
+      (restart-case
+          (handler-bind ((t #'(lambda (c)
+                                (setf (value-of e) c)
+                                (if (typep c class-name)
+                                    (invoke-restart 'raises)
+                                    (invoke-restart 'donot)))))
+            (evaluate e)
+            nil)
+        (raises (&optional v)
+          (declare (ignore v))
+          t)
+        (donot (&optional v)
+          (declare (ignore v))
+          nil)))))
 
 ;;
 (defmacro => (form &rest specification)
   (let ((expectation-class (car specification))
     (args (cdr specification)))
-    `(let* ((result ',form)
-        (expectation (make-instance ',expectation-class
-                      :expr result
-                      :args ',args)))
+    `(let ((expectation
+            (make-instance ',expectation-class
+                           :value-fn #'(lambda () ,form)
+                           :args ',args)))
        (unless (fulfills? expectation)
-     (error (make-instance 'expectation-not-met)))
-       result)))
+         (error (make-instance 'expectation-not-met
+         :expectation expectation
+         :form ',form)))
+       (value-of expectation))))
 
 ;; Grouping
 (defmacro define-with-spec-grouping (name)

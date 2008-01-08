@@ -11,9 +11,6 @@
 - mocks
 - more matchers
 
-* Corners
-- move variable initialization to each time
-
 * Literacy
 - should it expand to defclass, with an initarg of tests?
 - write serializer, or change template to work on objects

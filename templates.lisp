@@ -9,7 +9,8 @@
 ${expr} constructs against the environment in DICTIONARY."
   (let* ((template (read-template source-pathname)))
     (with-open-file (s target-pathname :direction :output :if-exists :supersede)
-      (apply-template template dictionary s))))
+      (apply-template template dictionary s)
+      target-pathname)))
 
 ;; TODO: this could be a LOT more efficient
 (defmacro with-next-substring ((string &optional (min (gensym "min")))
