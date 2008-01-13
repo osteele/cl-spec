@@ -12,9 +12,17 @@ ${expr} constructs against the environment in DICTIONARY."
       (apply-template template dictionary s)
       target-pathname)))
 
-;; TODO: this could be a LOT more efficient
-(defmacro with-next-substring ((string &optional (min (gensym "min")))
+;; TODO: this be somewhat more efficient by only searching lower
+;; positions than any match so far; and much more efficient by
+;; compiling the test strings into a regular expression..
+(defmacro with-next-substring ((string &optional (pos (gensym "pos")))
                                &body clauses)
+  "This is similar to COND, except that if a test form is a string,
+it is considered true if it is the first of the string test forms
+to appear in STRING.
+
+If POS is supplied, it is bound to the index of the position of the
+first string to appear in STRING."
   ;; not all positions are used, but it's easier to keep this the same
   ;; length as clauses
   (let ((positions (loop for (token . body) in clauses
@@ -38,7 +46,12 @@ ${expr} constructs against the environment in DICTIONARY."
 
 ;; FIXME: doesn't know to avoid punctuation in strings
 (defun read-template (pathname)
-    (let ((stack nil)
+  "Parse PATHNAME into a template.  A template is a list of chunks;
+each chunk is either a string or character; or a symbol (which is a
+key in the application-time dictionary); a DICTIONARY that represents
+a FORMAT directive and arguments; or a DICTIONARY that represents the
+name of a sequence to iterate, and nested template to recursively apply."
+  (let ((stack nil)
           (chunks nil)
           context)
       ;; Hand-crafted state-machine parser.  Run away!  Run away!
@@ -67,47 +80,47 @@ ${expr} constructs against the environment in DICTIONARY."
                     (compile-interpolation (subseq string 0 pos))
                     (process-line (subseq string (1+ pos)) crlf))
                    (t
-                    (begin-iteration string crlf))))
+                   (begin-iteration string crlf))))
                (compile-interpolation (string)
                  (with-next-substring (string pos)
                    ("|"
-                    (push {:type :format
-                          :format-string
-                          (trim (subseq string 0 pos))
-                          :format-args
-                          (loop for symbol in (split (subseq string (1+ pos)) #\space)
-                             unless (string= "" symbol)
-                             collect (intern (string-upcase (trim symbol))))
-                          }
-                          chunks))
+                   (push {:type :format
+                         :format-string
+                         (trim (subseq string 0 pos))
+                         :format-args
+                         (loop for symbol in (split (subseq string (1+ pos)) #\space)
+                            unless (string= "" symbol)
+                            collect (intern (string-upcase (trim symbol))))
+                         }
+                         chunks))
                    (t
-                    (push (intern (string-upcase string)) chunks))))
+                   (push (intern (string-upcase string)) chunks))))
                (begin-iteration (string crlf)
                  (with-next-substring (string pos)
                    ("=>"
-                    (let ((variable (intern (string-upcase (trim (subseq string 0 pos)))))
-                          (residue (subseq string (+ pos 2))))
-                      (push (cons chunks context) stack)
-                      (setf chunks nil
-                            context {:type :iteration :sequence-variable variable}
-)
-                      (process-line residue crlf)))
+                   (let ((variable (intern (string-upcase (trim (subseq string 0 pos)))))
+                         (residue (subseq string (+ pos 2))))
+                     (push (cons chunks context) stack)
+                     (setf chunks nil
+                           context {:type :iteration :sequence-variable variable}
+                           )
+                     (process-line residue crlf)))
                    (t
-                    (error "unrecognized interpolation format: ~S" string))))
+                   (error "unrecognized interpolation format: ~S" string))))
                (end-iteration ()
                  (let ((iterator context))
                    (destructuring-bind (previous-chunks . previous-context)
-                       (pop stack)
-                     (setref context :body (nreverse chunks))
-                     (setf chunks previous-chunks
-                           context previous-context)
-                     (push iterator chunks)))))
+                   (pop stack)
+                   (setref context :body (nreverse chunks))
+                   (setf chunks previous-chunks
+                         context previous-context)
+                   (push iterator chunks)))))
         (with-open-file (s pathname :direction :input)
           (map-lines #'process-line s)))
-      (nreverse chunks))
-    )
+      (nreverse chunks)))
 
-(defvar *trace-templates* nil)
+(defvar *trace-templates* nil
+  "Set this to true to debug templates.")
 
 (defun apply-template (template &optional (dictionary {}) (output-stream t))
   (if (stringp template)

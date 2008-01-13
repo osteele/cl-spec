@@ -7,11 +7,12 @@
     :description "Behavioral Testing for Common Lisp."
     :version "0.1"
     :author "Oliver Steele <steele@osteele.com>"
-    :licence "unknown"
+    :licence "MIT License"
     :components ((:file "formatters"
                         :depends-on ("specify" "utilities" "templates"))
                  (:file "specify" :depends-on ("bdd" "utilities"))
-                 (:file "templates" :depends-on ("utilities"))
+                 (:file "templates"); :depends-on ("utilities"))
                  (:file "utilities")
                  (:file "bdd"))
-    :depends-on (:lexicons))
+    ;:depends-on (:lexicons)
+    )

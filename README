@@ -21,7 +21,7 @@ examples of specifications.
 
 == Usage
 
-Their are three ways to run a spec.
+There are three ways to run a spec.
 
 First, by evaluating it (from the command line, or in an editor
 window).  This runs the specification, and returns a short string

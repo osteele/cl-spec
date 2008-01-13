@@ -120,11 +120,16 @@ subdirectory for examples in Lisp syntax."
      unless (ref1 example :success)
      collect example))
 
+(define-method (specification-results-failures-count (self specification-results))
+  (length (specification-results-failures self)))
+
+(define-method (specification-results-examples-count (self specification-results))
+  (length (specification-results-examples self)))
+
 ;(define-accumulating-method (specification-result-elapsed-time
 ;                             (results specification-results)
 ;                             :child-reader specification-results-examples)
 ;    sum)
-
 
 ;;;
 ;;; Running
