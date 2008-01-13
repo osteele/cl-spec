@@ -9,11 +9,10 @@
 
 (define-class text-specification-formatter (specification-formatter))
 
-(define-method (format-specification-results
-                (formatter text-specification-formatter)
-                results
-                &key (output-stream t) pathname
-                &allow-other-keys)
+(defmethod format-specification-results
+    ((formatter text-specification-formatter) results
+     &key (output-stream t) pathname
+     &allow-other-keys)
   (format t "~%~%")
   (loop for result in (specification-results-failures results)
      for i upfrom 1
@@ -32,11 +31,9 @@
 
 (define-class status-line-specification-formatter (specification-formatter))
 
-(define-method (format-specification-results
-                (formatter status-line-specification-formatter)
-                results
-                &key
-                &allow-other-keys)
+(defmethod format-specification-results
+    ((formatter status-line-specification-formatter) results
+     &key &allow-other-keys)
   (if (zerop (specification-results-failures-count results))
       (format nil "~D example~:P passed"
               (specification-results-examples-count results))
@@ -55,11 +52,9 @@
 
 (define-class html-specification-formatter (specification-formatter))
 
-(define-method (format-specification-results
-                (formatter html-specification-formatter)
-                results
-                &key pathname
-                &allow-other-keys)
+(defmethod format-specification-results
+    ((formatter html-specification-formatter) results
+     &key pathname &allow-other-keys)
   ;; for now, the group hierarchy must be exactly one deep
   (labels ((translate-results (results depth)
              (etypecase results

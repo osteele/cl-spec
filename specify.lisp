@@ -27,7 +27,8 @@ for DEFINE-SPECIFICATION to collect into.")
   (:documentation "DEFINE-SPECIFICATION instantiates this.  It holds a list
 of named examples."))
 
-(define-print-method (specification name) "#<specification ~S>" name)
+(defmethod print-object ((self specification) stream)
+  (format stream "#<specification ~S>" (specification-name name)))
 
 (defmacro define-specification (name bindings &body body)
   "Define a SPECIFICATION, with a name, variables, and a list of examples.
@@ -115,15 +116,15 @@ subdirectory for examples in Lisp syntax."
                  :reader specification-results-elapsed-time)
    (examples :initarg :examples :reader specification-results-examples)))
 
-(define-method (specification-results-failures (self specification-results))
+(defmethod specification-results-failures ((self specification-results))
   (loop for example in (specification-results-examples self)
      unless (ref1 example :success)
      collect example))
 
-(define-method (specification-results-failures-count (self specification-results))
+(defmethod specification-results-failures-count ((self specification-results))
   (length (specification-results-failures self)))
 
-(define-method (specification-results-examples-count (self specification-results))
+(defmethod specification-results-examples-count ((self specification-results))
   (length (specification-results-examples self)))
 
 ;(define-accumulating-method (specification-result-elapsed-time

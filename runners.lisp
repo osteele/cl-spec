@@ -4,7 +4,7 @@
 ;;; Running
 ;;;
 
-(define-method (run-specification (self specification) &key onsuccess onerror)
+(defmethod run-specification ((self specification) &key onsuccess onerror)
   "Run all the examples.  Returns a SPECIFICATION-RESULTS.
 
 Applies ONSUCCESS or ONERROR to each example name, depending on
@@ -43,10 +43,10 @@ show incremental progress during execution."
      (nreverse *specifications*)))
 
 ;; FIXME: this shouldn't be in the same gf as the method on SPECIFICATION
-(define-method (run-specification (pathname pathname)
-                                  &rest args
-                                  &key
-                                  (format 'text))
+(defmethod run-specification ((pathname pathname)
+                              &rest args
+                              &key
+                              (format 'text))
   "Run the specifications in PATHNAME reporting ,results to standard output."
   (labels ((write-progress-char (char)
              (format t char)
@@ -76,12 +76,12 @@ show incremental progress during execution."
        :pathname pathname
        args))))
 
-(define-method (run-specification (string string) &rest args &key &allow-other-keys)
+(defmethod run-specification ((string string) &rest args &key &allow-other-keys)
   (apply #'run-specification (pathname string) args))
 
-(define-method (specification-runner (pathname pathname) &key &allow-other-keys)
+(defmethod specification-runner ((pathname pathname) &key &allow-other-keys)
   "Run the specifications in PATHNAME reporting results to standard output."
   (run-specification pathname))
 
-(define-method (specification-runner (string string) &rest args &key &allow-other-keys)
+(defmethod specification-runner ((string string) &rest args &key &allow-other-keys)
   (apply #'run-specification (pathname string) args))

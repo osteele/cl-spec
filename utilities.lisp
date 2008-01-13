@@ -6,7 +6,7 @@
   "(LIST-TYPE {type}) is a LIST whose elements are type {type}."
   `(and list (or null (cons ,type))))
 
-(define-method (trim (s string))
+(defmethod trim ((s string))
   "Return S without initial or final whitespace characters.
 A whitespace character is a space, or a non-graphic character.
 If S is all whitespace, the result is the empty string.
@@ -26,8 +26,8 @@ Non-consing if the result is STRING= to S."
     "A setter for dictionaries.")
 
 ;; TODO: default slot-names by introspection
-(define-method (object->dictionary (object t) reader-names
-                                   &key (basename (type-of object)))
+(defmethod object->dictionary ((object t) reader-names
+                               &key (basename (type-of object)))
   "Create a DICTIONARY whose keys are the names in READER-NAMES, and
 whose values are the applications to OBJECT of the functions named by
 those objects, prefixed by BASENAME (which defaults the type of OBJECT)."
@@ -45,7 +45,7 @@ those objects, prefixed by BASENAME (which defaults the type of OBJECT)."
 
 (defmacro with-elapsed-time (&body body)
   "Same as PROGN, but returns the elapsed time in seconds as a second value."
-  (with-gensym t0
+  (let ((t0 (gensym "t0")))
     `(let* ((,t0 (get-internal-real-time))
            (value (progn ,@body))
            (elapsed-time
@@ -67,6 +67,6 @@ and projected via FUNCTION-NAME."
         (child-reader (or child-reader
                           (concatenate-symbol type "-CHILDREN")))
         (child (gensym "child")))
-    `(define-method (,function-name (,self ,type))
+    `(defmethod ,function-name ((,self ,type))
        (loop for ,child in (,child-reader ,self)
             ,accumulation-construct (,value-reader ,child)))))

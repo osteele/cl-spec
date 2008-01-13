@@ -10,6 +10,7 @@
     :licence "MIT License"
     :components ((:file "formatters"
                         :depends-on ("specify" "utilities" "templates"))
+                 (:file "runners")
                  (:file "specify" :depends-on ("bdd" "utilities"))
                  (:file "templates"); :depends-on ("utilities"))
                  (:file "utilities")
