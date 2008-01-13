@@ -10,9 +10,12 @@
 - integrate with huchentoot
 - mocks
 - more matchers
+- groups
 
 * Literacy
 - should it expand to defclass, with an initarg of tests?
 - write serializer, or change template to work on objects
+- or, use a real template package
+
+* Optimizations
 - template should compile
-- or, find a real template package

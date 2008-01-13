@@ -30,6 +30,7 @@ first string to appear in STRING."
                       collect (gensym)
                       else
                       collect nil))
+        (min pos)
         (occurrences (gensym "occurrences")))
     `(let* (,@(loop for (token . body) in clauses
                 for pos in positions

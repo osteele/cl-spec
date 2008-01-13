@@ -71,7 +71,13 @@ subdirectory for examples in Lisp syntax."
 ;;; Specification results
 ;;;
 
-(define-class abstract-specification-results)
+(defclass example-result ()
+  ((name :initarg :name :reader example-name :type string)
+   (success :initarg :success :reader example-success :type boolean)
+   (condition :initarg :condition :reader example-condition)))
+
+(defclass abstract-specification-results ()
+  ())
 
 (defclass specification-results-group (abstract-specification-results)
   ((children :initarg :children
@@ -117,9 +123,7 @@ subdirectory for examples in Lisp syntax."
    (examples :initarg :examples :reader specification-results-examples)))
 
 (defmethod specification-results-failures ((self specification-results))
-  (loop for example in (specification-results-examples self)
-     unless (ref1 example :success)
-     collect example))
+  (remove-if #'example-success (specification-results-examples self)))
 
 (defmethod specification-results-failures-count ((self specification-results))
   (length (specification-results-failures self)))

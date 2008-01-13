@@ -1,13 +1,15 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
 
-(define-class specification-formatter)
+(defclass specification-formatter ()
+  ())
 
 ;;;
 ;;; Plain Text Formatter
 ;;;
 
-(define-class text-specification-formatter (specification-formatter))
+(defclass text-specification-formatter (specification-formatter)
+  ())
 
 (defmethod format-specification-results
     ((formatter text-specification-formatter) results
@@ -16,8 +18,9 @@
   (format t "~%~%")
   (loop for result in (specification-results-failures results)
      for i upfrom 1
-     do (format output-stream "~D)~%~S FAILED~%~A~%~A~%~%"
-                i (ref1 result :name) (ref1 result :condition) pathname))
+     do (with-slots (name condition) result
+            (format output-stream "~D)~%~S FAILED~%~A~%~A~%~%"
+                    i name condition pathname)))
   (format output-stream "Finished in ~F seconds~%~%"
           (specification-results-elapsed-time results))
   (format output-stream "~D example~:P, ~D failure~:P"
@@ -29,7 +32,8 @@
 ;;; Status line formatter
 ;;;
 
-(define-class status-line-specification-formatter (specification-formatter))
+(defclass status-line-specification-formatter (specification-formatter)
+  ())
 
 (defmethod format-specification-results
     ((formatter status-line-specification-formatter) results
@@ -40,7 +44,8 @@
       (format nil "~D failure~:P: ~{~A~^, ~}"
               (specification-results-failures-count results)
               (loop for example in (specification-results-failures results)
-                   collect (ref1 example :name)))))
+                   collect (example-name example)))))
+
 
 ;;;
 ;;; HTML Formatter
@@ -50,7 +55,8 @@
   (merge-pathnames "template.html" *load-pathname*)
   "The :FORMAT 'HTML option to RUN-SPECIFICATION starts with this.")
 
-(define-class html-specification-formatter (specification-formatter))
+(defclass html-specification-formatter (specification-formatter)
+  ())
 
 (defmethod format-specification-results
     ((formatter html-specification-formatter) results
@@ -92,8 +98,8 @@
                         (mapcar #'translate-example (specification-results-examples results)))
                   dict))))
           (translate-example (example)
-            ;; it's already in dictionary form
-            example))
+            (with-slots (name success condition) example
+              {name name success success condition condition})))
     (copy-template *html-spec-parameter-pathname*
                    (merge-pathnames (make-pathname :type "html") pathname)
                    (translate-results results 0))))

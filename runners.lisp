@@ -28,7 +28,10 @@ show incremental progress during execution."
           (loop for (name . fn) in (specification-examples self)
              collect (multiple-value-bind (success condition)
                          (run-example name fn)
-                         {:name name :success success :condition condition})))
+                         (make-instance 'example-result
+                                        :name name
+                                        :success success
+                                        :condition condition))))
       (make-instance 'specification-results
                      :specification self
                      :elapsed-time elapsed-time
