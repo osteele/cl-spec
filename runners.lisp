@@ -1,8 +1,14 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
+(in-package #:cl-spec)
+
 ;;;
 ;;; Running
 ;;;
+
+(defun run-spec (&rest rest)
+  "An abbreviation for run-specification."
+  (apply #'run-specification rest))
 
 (defmethod run-specification ((self specification) &key onsuccess onerror)
   "Run all the examples.  Returns a SPECIFICATION-RESULTS.

@@ -1,19 +1,26 @@
-;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
+#|
+Copyright 2008 by Oliver Steele.  All rights reserved.
 
-(defpackage #:cl-spec-asd (:use :cl :asdf))
+This code is available under the MIT License.
+|#
+
+(defpackage #:cl-spec-asd (:use #:cl #:asdf))
 (in-package #:cl-spec-asd)
 
-(defsystem "cl-spec"
+(asdf:defsystem "cl-spec"
     :description "Behavioral Testing for Common Lisp."
-    :version "0.1"
-    :author "Oliver Steele <steele@osteele.com>"
+    :version "0.1.6"
+    :author "Oliver Steele <steele@osteele.com>, Yurii Rashkovskii"
+    :maintainer "Oliver Steele <steele@osteele.com>"
     :licence "MIT License"
-    :components ((:file "formatters"
-                        :depends-on ("specify" "utilities" "templates"))
-                 (:file "runners")
-                 (:file "specify" :depends-on ("bdd" "utilities"))
-                 (:file "templates"); :depends-on ("utilities"))
+    :serial t
+    :components ((:file "package")
                  (:file "utilities")
-                 (:file "bdd"))
+                 (:file "templates"); :depends-on ("utilities"))
+                 (:file "bdd")
+                 (:file "specify" :depends-on ("bdd" "utilities"))
+                 (:file "formatters"
+                        :depends-on ("specify" "utilities" "templates"))
+                 (:file "runners"))
     ;:depends-on (:lexicons)
     )

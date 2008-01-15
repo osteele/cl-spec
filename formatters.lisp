@@ -1,5 +1,6 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
+(in-package #:cl-spec)
 
 (defclass specification-formatter ()
   ())

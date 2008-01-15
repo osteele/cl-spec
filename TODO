@@ -11,6 +11,7 @@
 - mocks
 - more matchers
 - groups
+- integrate with clickcheck
 
 * Literacy
 - should it expand to defclass, with an initarg of tests?

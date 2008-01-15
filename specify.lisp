@@ -1,7 +1,8 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
+(in-package #:cl-spec)
+
 (require 'dictionary)
-(require 'bdd)
 
 (defvar *collect-specifications* nil
   "If true, DEFINE-SPECIFICATION collects specifications into
@@ -28,7 +29,7 @@ for DEFINE-SPECIFICATION to collect into.")
 of named examples."))
 
 (defmethod print-object ((self specification) stream)
-  (format stream "#<specification ~S>" (specification-name name)))
+  (format stream "#<specification ~S>" (specification-name specification)))
 
 (defmacro define-specification (name bindings &body body)
   "Define a SPECIFICATION, with a name, variables, and a list of examples.
@@ -66,6 +67,8 @@ subdirectory for examples in Lisp syntax."
               (run-specification spec))
              spec)))))
 
+(defmacro specify (name bindings &rest examples)
+  `(define-specification ,name ,bindings ,@examples))
 
 ;;;
 ;;; Specification results
@@ -78,6 +81,11 @@ subdirectory for examples in Lisp syntax."
 
 (defclass abstract-specification-results ()
   ())
+
+(dolist (name '(examples failures examples-count failures-count elapsed-time))
+  (ensure-generic-function (intern (format nil "SPECIFICATION-RESULTS-~A" name))
+                           :argument-precedence-order '(specification-results)))
+
 
 (defclass specification-results-group (abstract-specification-results)
   ((children :initarg :children

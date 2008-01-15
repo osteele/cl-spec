@@ -19,6 +19,11 @@ the condition text is not very useful).
 See the Lisp files in the examples directory for some very simple
 examples of specifications.
 
+== Loading
+
+(asdf:oos 'asdf:load-op :cl-spec)
+
+
 == Usage
 
 There are three ways to run a spec.

@@ -4,6 +4,8 @@
 ;;; ows 2008-01-05 -- fixed compiler errors and warnings
 ;;; ows 2008-01-08 -- eval -> funcall, to capture lexical scope
 
+(in-package #:cl-spec)
+
 ;; Utilities
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmethod obj->string ((s string))
@@ -164,5 +166,3 @@
 (defmacro specify (name &body body)
   `(let ((*spec-specification* ,name))
      ,@body))
-
-(provide 'bdd)

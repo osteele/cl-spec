@@ -1,5 +1,7 @@
 ;;; Copyright 2008 by Oliver Steele.  Released under the MIT License.
 
+(in-package #:cl-spec)
+
 ;; A quick and dirty template facilityq that does just enough to
 ;; enable HTML output from cl-spec.  A proper implementation would
 ;; compile to a function, as well as use a proper parser.
